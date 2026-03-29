@@ -280,8 +280,15 @@ const isChangingPassword = ref(false)
 const testSmtpConnection = async () => {
   isTestingSmtp.value = true
   try {
-    // TODO: 实现 SMTP 测试连接
-    alert('SMTP 测试功能即将上线')
+    const response = await adminApi.testSmtpConnection(smtpForm.value)
+    if (response.data.success) {
+      alert('SMTP 连接测试成功！')
+    } else {
+      alert(response.data.error || 'SMTP 连接测试失败')
+    }
+  } catch (error: any) {
+    console.error('SMTP 测试失败:', error)
+    alert(error.response?.data?.error || 'SMTP 连接测试失败，请检查配置')
   } finally {
     isTestingSmtp.value = false
   }

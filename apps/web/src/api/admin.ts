@@ -27,12 +27,16 @@ export const adminApi = {
   apiClient.post<ApiResponse>(`/admin/assessments/${assessmentId}/send-email`, data),
   
   // 检查 SMTP 配置
-  checkSmtpConfig: () =
-  apiClient.get<ApiResponse<{ configured: boolean }>>('/admin/smtp/check'),
+  checkSmtpConfig: () =>
+    apiClient.get<ApiResponse<{ configured: boolean }>>('/admin/smtp/check'),
+  
+  // 测试 SMTP 连接
+  testSmtpConnection: (config: { host: string; port: number; secure: boolean; user: string; pass: string }) =>
+    apiClient.post<ApiResponse>('/admin/smtp/test', config),
   
   // 更新 SMTP 配置
-  updateSmtpConfig: (config: { host: string; port: number; secure: boolean; user: string; pass: string }) =
-  apiClient.post<ApiResponse>('/admin/smtp/config', config),
+  updateSmtpConfig: (config: { host: string; port: number; secure: boolean; user: string; pass: string }) =>
+    apiClient.post<ApiResponse>('/admin/smtp/config', config),
   
   // 导出所有数据为 Excel
   exportAllToExcel: () =>

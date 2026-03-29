@@ -6,6 +6,7 @@ import { prisma } from '@career-assessment/database'
 import { authenticate, type AuthRequest } from '../middleware/auth'
 import type { Dimension } from '@career-assessment/shared'
 import { DimensionLabels, ReviewStatusLabels } from '@career-assessment/shared'
+import { testSMTPConnection, sendEmail } from '../utils/emailService'
 
 const router = Router()
 
@@ -410,7 +411,36 @@ router.post('/assessments/:id/send-email', async (req: AuthRequest, res, next) =
       })
     }
     
-    // 创建邮件队列记录（模拟发送）
+    // 解析 SMTP 配置
+    const smtpConfig = JSON.parse(admin.smtpConfig as string)
+    
+    // 发送真实邮件
+    const result = await sendEmail(smtpConfig, {
+      to,
+      subject,
+      body
+    })
+    
+    if (!result.success) {
+      // 记录失败
+      await prisma.emailQueue.create({
+        data: {
+          assessmentId: id,
+          to,
+          subject,
+          body,
+          status: 'FAILED',
+          error: result.error
+        }
+      })
+      
+      return res.status(500).json({
+        success: false,
+        error: result.error || '邮件发送失败'
+      })
+    }
+    
+    // 记录成功
     await prisma.emailQueue.create({
       data: {
         assessmentId: id,
@@ -430,8 +460,41 @@ router.post('/assessments/:id/send-email', async (req: AuthRequest, res, next) =
     
     res.json({
       success: true,
-      message: '邮件已添加到发送队列'
+      message: '邮件发送成功',
+      messageId: result.messageId
     })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 测试 SMTP 连接
+router.post('/smtp/test', async (req: AuthRequest, res, next) => {
+  try {
+    const schema = z.object({
+      host: z.string().min(1),
+      port: z.number().int(),
+      secure: z.boolean(),
+      user: z.string().email(),
+      pass: z.string().min(1)
+    })
+    
+    const config = schema.parse(req.body)
+    
+    // 测试连接
+    const result = await testSMTPConnection(config)
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'SMTP 连接测试成功'
+      })
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error || 'SMTP 连接测试失败'
+      })
+    }
   } catch (error) {
     next(error)
   }

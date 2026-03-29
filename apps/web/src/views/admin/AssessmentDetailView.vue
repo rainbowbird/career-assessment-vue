@@ -130,6 +130,7 @@ import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { DimensionLabels, EducationLabels } from '@career-assessment/shared'
 import type { Dimension } from '@career-assessment/shared'
+import EmailModal from '@/components/admin/EmailModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,6 +138,8 @@ const authStore = useAuthStore()
 
 const assessment = ref<any>(null)
 const isLoading = ref(false)
+const showEmailModal = ref(false)
+const smtpConfigured = ref(false)
 
 // 计算属性
 const dimensionScores = computed(() => {
@@ -182,8 +185,18 @@ const updateStatus = async (status: string) => {
 }
 
 const openEmailModal = () => {
-  // TODO: 实现邮件发送弹窗
-  alert('邮件发送功能即将上线')
+  showEmailModal.value = true
+}
+
+const checkSmtpConfig = async () => {
+  try {
+    const response = await adminApi.checkSmtpConfig()
+    if (response.data.success && response.data.data) {
+      smtpConfigured.value = response.data.data.configured
+    }
+  } catch (error) {
+    console.error('检查 SMTP 配置失败:', error)
+  }
 }
 
 const exportPDF = async () => {
@@ -248,5 +261,17 @@ const logout = () => {
 
 onMounted(() => {
   loadAssessment()
+  checkSmtpConfig()
 })
+</script>
+
+<!-- 邮件发送弹窗 -->
+<EmailModal
+  :show="showEmailModal"
+  :assessment-id="assessment?.id || ''"
+  :default-to="assessment?.user?.email"
+  :smtp-configured="smtpConfigured"
+  @close="showEmailModal = false"
+  @sent="loadAssessment"
+/>
 </script>
