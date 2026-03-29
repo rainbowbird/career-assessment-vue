@@ -221,11 +221,23 @@ const openEmailModal = (assessment: AssessmentRecord) => {
 
 const exportData = async (format: 'pdf' | 'excel') => {
   try {
-    const response = await adminApi.exportData(format)
-    // TODO: 处理文件下载
-    alert(`导出${format === 'excel' ? 'Excel' : 'PDF'}功能即将上线`)
+    const response = await adminApi.exportAllToExcel()
+    
+    // 创建 Blob 并触发下载
+    const blob = new Blob([response.data], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `测评记录_${new Date().toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error('导出失败:', error)
+    alert('导出失败，请稍后重试')
   }
 }
 

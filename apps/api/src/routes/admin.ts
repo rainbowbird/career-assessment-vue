@@ -1,10 +1,11 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
+import * as XLSX from 'xlsx'
 import { prisma } from '@career-assessment/database'
 import { authenticate, type AuthRequest } from '../middleware/auth'
 import type { Dimension } from '@career-assessment/shared'
-import { DimensionLabels } from '@career-assessment/shared'
+import { DimensionLabels, ReviewStatusLabels } from '@career-assessment/shared'
 
 const router = Router()
 
@@ -206,91 +207,6 @@ router.patch('/assessments/:id/status', async (req: AuthRequest, res, next) => {
     await prisma.assessment.update({
       where: { id },
       data: { reviewStatus: status }
-    })
-    
-    res.json({ success: true })
-  } catch (error) {
-    next(error)
-  }
-})
-
-// 检查 SMTP 配置
-router.get('/smtp/check', async (req: AuthRequest, res, next) => {
-  try {
-    const admin = await prisma.admin.findFirst()
-    const configured = admin?.smtpConfig ? true : false
-    
-    res.json({
-      success: true,
-      data: { configured }
-    })
-  } catch (error) {
-    next(error)
-  }
-})
-
-// 更新 SMTP 配置
-router.post('/smtp/config', async (req: AuthRequest, res, next) => {
-  try {
-    const schema = z.object({
-      host: z.string().min(1),
-      port: z.number().int(),
-      secure: z.boolean(),
-      user: z.string().email(),
-      pass: z.string().min(1)
-    })
-    
-    const config = schema.parse(req.body)
-    
-    const admin = await prisma.admin.findFirst()
-    if (!admin) {
-      return res.status(404).json({
-        success: false,
-        error: '管理员账号不存在'
-      })
-    }
-    
-    await prisma.admin.update({
-      where: { id: admin.id },
-      data: { smtpConfig: JSON.stringify(config) }
-    })
-    
-    res.json({ success: true })
-  } catch (error) {
-    next(error)
-  }
-})
-
-// 修改管理员密码
-router.post('/change-password', async (req: AuthRequest, res, next) => {
-  try {
-    const schema = z.object({
-      oldPassword: z.string().min(1),
-      newPassword: z.string().min(6)
-    })
-    
-    const { oldPassword, newPassword } = schema.parse(req.body)
-    
-    const admin = await prisma.admin.findFirst()
-    if (!admin) {
-      return res.status(404).json({
-        success: false,
-        error: '管理员账号不存在'
-      })
-    }
-    
-    const isValid = await bcrypt.compare(oldPassword, admin.password)
-    if (!isValid) {
-      return res.status(401).json({
-        success: false,
-        error: '当前密码错误'
-      })
-    }
-    
-    const hashedPassword = await bcrypt.hash(newPassword, 10)
-    await prisma.admin.update({
-      where: { id: admin.id },
-      data: { password: hashedPassword }
     })
     
     res.json({ success: true })
@@ -521,21 +437,225 @@ router.post('/assessments/:id/send-email', async (req: AuthRequest, res, next) =
   }
 })
 
-// 导出数据
-router.post('/export', async (req: AuthRequest, res, next) => {
+// 导出数据 - 已实现真实导出功能
+router.get('/export/excel', async (req: AuthRequest, res, next) => {
   try {
-    const schema = z.object({
-      format: z.enum(['pdf', 'excel']),
-      ids: z.array(z.string()).optional()
+    // 获取所有已完成的测评数据
+    const assessments = await prisma.assessment.findMany({
+      where: { status: 'COMPLETED' },
+      include: {
+        user: true
+      },
+      orderBy: { createdAt: 'desc' }
     })
+
+    // 准备 Excel 数据
+    const data = assessments.map(a => {
+      const dimensionScores = a.dimensionScores 
+        ? JSON.parse(a.dimensionScores as string) 
+        : {}
+      
+      return {
+        '姓名': a.user.name,
+        '专业': a.user.major,
+        '班级': a.user.class,
+        '学校': a.user.school,
+        '学历': a.user.education,
+        '邮箱': a.user.email,
+        '手机号': a.user.phone,
+        '总分': a.totalScore,
+        '沟通表达': dimensionScores.COMMUNICATION || 0,
+        '团队协作': dimensionScores.TEAMWORK || 0,
+        '问题解决': dimensionScores.PROBLEM_SOLVING || 0,
+        '学习适应': dimensionScores.LEARNING || 0,
+        '职业认知': dimensionScores.CAREER_AWARENESS || 0,
+        '创新思维': dimensionScores.INNOVATION || 0,
+        '时间管理': dimensionScores.TIME_MANAGEMENT || 0,
+        '情绪管理': dimensionScores.EMOTIONAL || 0,
+        '领导力': dimensionScores.LEADERSHIP || 0,
+        '审阅状态': ReviewStatusLabels[a.reviewStatus as keyof typeof ReviewStatusLabels] || a.reviewStatus,
+        '测评日期': a.createdAt.toLocaleDateString('zh-CN')
+      }
+    })
+
+    // 创建工作簿
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet(data)
     
-    const { format, ids } = schema.parse(req.body)
+    // 设置列宽
+    const colWidths = [
+      { wch: 10 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 8 },
+      { wch: 20 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 10 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+      { wch: 10 }, { wch: 10 }, { wch: 12 }
+    ]
+    ws['!cols'] = colWidths
+
+    // 添加工作表到工作簿
+    XLSX.utils.book_append_sheet(wb, ws, '测评记录')
+
+    // 生成 Excel 文件
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
     
-    // TODO: 实现数据导出功能
+    // 设置响应头
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename=测评记录_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    
+    // 发送文件
+    res.send(buffer)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 导出单条记录为 PDF
+router.get('/export/pdf/:id', async (req: AuthRequest, res, next) => {
+  try {
+    const { id } = req.params
+    
+    const assessment = await prisma.assessment.findUnique({
+      where: { id },
+      include: {
+        user: true
+      }
+    })
+
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        error: '测评不存在'
+      })
+    }
+
+    const dimensionScores = assessment.dimensionScores 
+      ? JSON.parse(assessment.dimensionScores as string) 
+      : {}
+
+    // 准备数据
+    const data = {
+      '姓名': assessment.user.name,
+      '专业': assessment.user.major,
+      '班级': assessment.user.class,
+      '学校': assessment.user.school,
+      '学历': assessment.user.education,
+      '邮箱': assessment.user.email,
+      '总分': assessment.totalScore,
+      '沟通表达': dimensionScores.COMMUNICATION || 0,
+      '团队协作': dimensionScores.TEAMWORK || 0,
+      '问题解决': dimensionScores.PROBLEM_SOLVING || 0,
+      '学习适应': dimensionScores.LEARNING || 0,
+      '职业认知': dimensionScores.CAREER_AWARENESS || 0,
+      '创新思维': dimensionScores.INNOVATION || 0,
+      '时间管理': dimensionScores.TIME_MANAGEMENT || 0,
+      '情绪管理': dimensionScores.EMOTIONAL || 0,
+      '领导力': dimensionScores.LEADERSHIP || 0,
+      '测评日期': assessment.createdAt.toLocaleDateString('zh-CN')
+    }
+
+    // 创建工作簿
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.json_to_sheet([data])
+    
+    // 设置列宽
+    ws['!cols'] = [{ wch: 15 }, { wch: 20 }]
+
+    // 添加工作表到工作簿
+    XLSX.utils.book_append_sheet(wb, ws, '测评详情')
+
+    // 生成 Excel 文件
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+    
+    // 设置响应头
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename=测评报告_${assessment.user.name}_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    
+    // 发送文件
+    res.send(buffer)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 检查 SMTP 配置
+router.get('/smtp/check', async (req: AuthRequest, res, next) => {
+  try {
+    const admin = await prisma.admin.findFirst()
+    const configured = admin?.smtpConfig ? true : false
+    
     res.json({
       success: true,
-      message: `${format.toUpperCase()} 导出功能即将上线`
+      data: { configured }
     })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 更新 SMTP 配置
+router.post('/smtp/config', async (req: AuthRequest, res, next) => {
+  try {
+    const schema = z.object({
+      host: z.string().min(1),
+      port: z.number().int(),
+      secure: z.boolean(),
+      user: z.string().email(),
+      pass: z.string().min(1)
+    })
+    
+    const config = schema.parse(req.body)
+    
+    const admin = await prisma.admin.findFirst()
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        error: '管理员账号不存在'
+      })
+    }
+    
+    await prisma.admin.update({
+      where: { id: admin.id },
+      data: { smtpConfig: JSON.stringify(config) }
+    })
+    
+    res.json({ success: true })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// 修改管理员密码
+router.post('/change-password', async (req: AuthRequest, res, next) => {
+  try {
+    const schema = z.object({
+      oldPassword: z.string().min(1),
+      newPassword: z.string().min(6)
+    })
+    
+    const { oldPassword, newPassword } = schema.parse(req.body)
+    
+    const admin = await prisma.admin.findFirst()
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        error: '管理员账号不存在'
+      })
+    }
+    
+    const isValid = await bcrypt.compare(oldPassword, admin.password)
+    if (!isValid) {
+      return res.status(401).json({
+        success: false,
+        error: '当前密码错误'
+      })
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    await prisma.admin.update({
+      where: { id: admin.id },
+      data: { password: hashedPassword }
+    })
+    
+    res.json({ success: true })
   } catch (error) {
     next(error)
   }

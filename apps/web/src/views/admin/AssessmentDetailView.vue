@@ -186,9 +186,28 @@ const openEmailModal = () => {
   alert('邮件发送功能即将上线')
 }
 
-const exportPDF = () => {
-  // TODO: 实现 PDF 导出
-  alert('PDF 导出功能即将上线')
+const exportPDF = async () => {
+  if (!assessment.value) return
+  
+  try {
+    const response = await adminApi.exportSingleToPDF(assessment.value.id)
+    
+    // 创建 Blob 并触发下载
+    const blob = new Blob([response.data], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `测评报告_${assessment.value.user.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('导出失败:', error)
+    alert('导出失败，请稍后重试')
+  }
 }
 
 const formatDate = (dateString: string) => {

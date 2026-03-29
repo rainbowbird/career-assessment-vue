@@ -34,9 +34,19 @@ export const adminApi = {
   updateSmtpConfig: (config: { host: string; port: number; secure: boolean; user: string; pass: string }) =
   apiClient.post<ApiResponse>('/admin/smtp/config', config),
   
-  // 导出数据
-  exportData: (format: 'pdf' | 'excel', ids?: string[]) =
-  apiClient.post<Blob>('/admin/export', { format, ids }, { responseType: 'blob' }),
+  // 导出所有数据为 Excel
+  exportAllToExcel: () =>
+    apiClient.get('/admin/export/excel', { 
+      responseType: 'blob',
+      headers: { 'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    }),
+  
+  // 导出单条记录为 Excel (PDF)
+  exportSingleToPDF: (id: string) =>
+    apiClient.get(`/admin/export/pdf/${id}`, { 
+      responseType: 'blob',
+      headers: { 'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    }),
   
   // 修改密码
   changePassword: (oldPassword: string, newPassword: string) =
