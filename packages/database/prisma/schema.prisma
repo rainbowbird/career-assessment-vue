@@ -1,0 +1,148 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户测评信息
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  major         String
+  class         String
+  email         String
+  school        String
+  phone         String
+  education     Education
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  assessments   Assessment[]
+}
+
+// 测评记录
+model Assessment {
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  startedAt       DateTime          @default(now())
+  completedAt     DateTime?
+  duration        Int?              // 用时（秒）
+  status          AssessmentStatus  @default(IN_PROGRESS)
+  reviewStatus    ReviewStatus      @default(PENDING)
+  answers         Answer[]
+  dimensionScores Json?             // 各维度得分 {dimensionId: score}
+  totalScore      Int?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+// 测评题目
+model Question {
+  id          String       @id @default(uuid())
+  order       Int          @unique // 题目顺序 1-31
+  scenario    String       @db.Text // 情境描述
+  content     String       @db.Text // 问题内容
+  options     Option[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// 题目选项
+model Option {
+  id           String    @id @default(uuid())
+  questionId   String
+  question     Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  order        Int       // 选项顺序 A/B/C/D
+  content      String    @db.Text // 选项内容
+  score        Int       // 该选项得分
+  dimension    Dimension // 影响的维度
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([questionId])
+}
+
+// 用户答案
+model Answer {
+  id            String       @id @default(uuid())
+  assessmentId  String
+  assessment    Assessment   @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  questionId    String
+  optionId      String
+  createdAt     DateTime     @default(now())
+
+  @@unique([assessmentId, questionId])
+  @@index([assessmentId])
+}
+
+// 管理员
+model Admin {
+  id           String   @id @default(uuid())
+  password     String   // bcrypt 加密后的密码
+  smtpConfig   Json?    // SMTP 配置
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// 邮件队列
+model EmailQueue {
+  id            String        @id @default(uuid())
+  assessmentId  String
+  to            String        // 收件人邮箱
+  subject       String        // 邮件主题
+  body          String        @db.Text // 邮件正文
+  attachment    Json?         // 附件信息
+  status        EmailStatus   @default(PENDING)
+  sentAt        DateTime?
+  error         String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+// 学历枚举
+enum Education {
+  BACHELOR  // 本科
+  MASTER    // 硕士
+  DOCTOR    // 博士
+  COLLEGE   // 专科
+}
+
+// 测评状态
+enum AssessmentStatus {
+  IN_PROGRESS  // 进行中
+  COMPLETED    // 已完成
+}
+
+// 审阅状态
+enum ReviewStatus {
+  PENDING    // 待审阅
+  REVIEWED   // 已审阅
+  SENT       // 已发送
+}
+
+// 邮件状态
+enum EmailStatus {
+  PENDING    // 待发送
+  SENT       // 已发送
+  FAILED     // 发送失败
+}
+
+// 测评维度枚举
+enum Dimension {
+  COMMUNICATION    // 沟通表达
+  TEAMWORK         // 团队协作
+  PROBLEM_SOLVING  // 问题解决
+  LEARNING         // 学习适应
+  CAREER_AWARENESS // 职业认知
+  INNOVATION       // 创新思维
+  TIME_MANAGEMENT  // 时间管理
+  EMOTIONAL        // 情绪管理
+  LEADERSHIP       // 领导力
+}
