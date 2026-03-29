@@ -13,11 +13,13 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - career-assessment-mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
       retries: 10
+    networks:
+      - career-network
 
   api:
     build:
@@ -38,6 +40,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - career-network
     command: pnpm dev
 
   web:
@@ -54,7 +58,14 @@ services:
     volumes:
       - ./apps/web:/app
       - /app/node_modules
+    networks:
+      - career-network
     command: pnpm dev
 
+networks:
+  career-network:
+    driver: bridge
+
 volumes:
-  mysql_data:
+  career-assessment-mysql-data:
+    driver: local
