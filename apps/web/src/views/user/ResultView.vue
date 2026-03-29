@@ -9,7 +9,7 @@
       </div>
     </nav>
 
-    <main v-if="result" class="container mx-auto px-4 py-8 max-w-6xl">
+    <main v-if="result" ref="reportContainer" class="container mx-auto px-4 py-8 max-w-6xl">
       <section class="bg-white rounded-xl shadow-md p-6 md:p-8 mb-8 slide-in">
         <!-- 总分展示 -->
         <div class="text-center mb-10">
@@ -107,9 +107,12 @@
         <div class="flex flex-col sm:flex-row justify-center gap-4">
           <button
             @click="downloadReport"
-            class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow"
+            :disabled="isGeneratingPDF"
+            class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow disabled:opacity-50"
           >
-            <i class="fa-solid fa-download mr-2"></i> 下载我的报告
+            <i v-if="!isGeneratingPDF" class="fa-solid fa-download mr-2"></i>
+            <i v-else class="fa-solid fa-spinner fa-spin mr-2"></i>
+            {{ isGeneratingPDF ? '生成中...' : '下载我的报告' }}
           </button>
           
           <button
@@ -125,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAssessmentStore } from '@/stores/assessment'
 import { assessmentApi } from '@/api/assessment'
@@ -141,6 +144,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js'
+import { generateSimplePDF } from '@/utils/pdfGenerator'
 
 // 注册 Chart.js 组件
 ChartJS.register(
@@ -154,6 +158,8 @@ ChartJS.register(
 
 const router = useRouter()
 const assessmentStore = useAssessmentStore()
+const reportContainer = ref<HTMLElement | null>(null)
+const isGeneratingPDF = ref(false)
 
 const result = computed(() => assessmentStore.result)
 
@@ -222,8 +228,23 @@ const chartOptions = {
 
 // 方法
 const downloadReport = async () => {
-  // TODO: 实现 PDF 下载功能
-  alert('PDF 下载功能即将上线')
+  if (!result.value || isGeneratingPDF.value) return
+  
+  isGeneratingPDF.value = true
+  
+  try {
+    const userName = assessmentStore.userInfo?.name || '未知用户'
+    
+    // 使用简单 PDF 生成方法
+    generateSimplePDF(result.value, userName)
+    
+    console.log('PDF 报告已生成并下载')
+  } catch (error) {
+    console.error('生成 PDF 失败:', error)
+    alert('生成 PDF 失败，请稍后重试')
+  } finally {
+    isGeneratingPDF.value = false
+  }
 }
 
 const restartAssessment = () => {
