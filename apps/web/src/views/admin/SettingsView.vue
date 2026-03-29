@@ -122,12 +122,20 @@
           <div v-if="activeTab === 'questions'">
             <div class="flex justify-between items-center mb-4">
               <h3 class="text-lg font-semibold">测评题目管理</h3>
-              <button
-                @click="loadQuestions"
-                class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-100"
-              >
-                <i class="fa-solid fa-refresh mr-1"></i>刷新
-              </button>
+              <div class="flex gap-2">
+                <button
+                  @click="showEditModal = true; editingQuestion = null"
+                  class="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90"
+                >
+                  <i class="fa-solid fa-plus mr-1"></i>新增题目
+                </button>
+                <button
+                  @click="loadQuestions"
+                  class="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-100"
+                >
+                  <i class="fa-solid fa-refresh mr-1"></i>刷新
+                </button>
+              </div>
             </div>
 
             <div class="space-y-4 max-h-[600px] overflow-y-auto">
@@ -137,13 +145,21 @@
                 class="border rounded-lg p-4 hover:shadow-md transition-shadow"
               >
                 <div class="flex items-start justify-between mb-2">
-                  <span class="font-medium text-primary">题目 {{ index + 1 }}</span>
-                  <button
-                    @click="editQuestion(question)"
-                    class="text-sm text-primary hover:underline"
-                  >
-                    编辑
-                  </button>
+                  <span class="font-medium text-primary">题目 {{ question.order }}</span>
+                  <div class="flex gap-2">
+                    <button
+                      @click="editQuestion(question)"
+                      class="text-sm text-primary hover:underline"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      @click="deleteQuestion(question.id)"
+                      class="text-sm text-red-500 hover:underline"
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
                 
                 <p class="text-sm text-gray-600 mb-2">{{ question.scenario }}</p>
@@ -220,12 +236,17 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { questionApi } from '@/api/question'
+import QuestionEditModal from '@/components/admin/QuestionEditModal.vue'
 import type { Question } from '@career-assessment/shared'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const activeTab = ref('smtp')
+
+// 弹窗状态
+const showEditModal = ref(false)
+const editingQuestion = ref<Question | null>(null)
 
 const tabs = [
   { id: 'smtp', label: 'SMTP 配置', icon: 'fa-solid fa-envelope' },
@@ -293,8 +314,50 @@ const loadQuestions = async () => {
 }
 
 const editQuestion = (question: Question) => {
-  // TODO: 实现题目编辑弹窗或跳转
-  alert(`编辑题目: ${question.id}`)
+  editingQuestion.value = question
+  showEditModal.value = true
+}
+
+const handleSaveQuestion = async (data: any) => {
+  try {
+    if (editingQuestion.value) {
+      // 更新题目
+      const response = await questionApi.updateQuestion(editingQuestion.value.id, data)
+      if (response.data.success) {
+        alert('题目更新成功')
+        showEditModal.value = false
+        loadQuestions()
+      }
+    } else {
+      // 创建新题目
+      const response = await questionApi.createQuestion(data)
+      if (response.data.success) {
+        alert('题目创建成功')
+        showEditModal.value = false
+        loadQuestions()
+      }
+    }
+  } catch (error) {
+    console.error('保存题目失败:', error)
+    alert('保存失败，请稍后重试')
+  }
+}
+
+const deleteQuestion = async (id: string) => {
+  if (!confirm('确定要删除这道题目吗？此操作不可恢复。')) {
+    return
+  }
+  
+  try {
+    const response = await questionApi.deleteQuestion(id)
+    if (response.data.success) {
+      alert('题目删除成功')
+      loadQuestions()
+    }
+  } catch (error) {
+    console.error('删除题目失败:', error)
+    alert('删除失败，请稍后重试')
+  }
 }
 
 const changePassword = async () => {
@@ -336,3 +399,11 @@ onMounted(() => {
   loadQuestions()
 })
 </script>
+
+<!-- 题目编辑弹窗 -->
+<QuestionEditModal
+  :show="showEditModal"
+  :question="editingQuestion"
+  @close="showEditModal = false"
+  @save="handleSaveQuestion"
+/>
