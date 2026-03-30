@@ -104,7 +104,26 @@ router.post('/:id/complete', async (req, res, next) => {
       })
     }
     
-    // 计算各维度得分
+    // 计算各维度得分（收集每个维度的所有分数）
+    const dimensionScoresMap: Record<Dimension, number[]> = {
+      COMMUNICATION: [],
+      TEAMWORK: [],
+      PROBLEM_SOLVING: [],
+      LEARNING: [],
+      CAREER_AWARENESS: [],
+      INNOVATION: [],
+      TIME_MANAGEMENT: [],
+      EMOTIONAL: [],
+      LEADERSHIP: []
+    }
+
+    assessment.answers.forEach(answer => {
+      if (answer.option) {
+        dimensionScoresMap[answer.option.dimension].push(answer.option.score)
+      }
+    })
+
+    // 计算每个维度的平均分（0-100）
     const dimensionScores: Record<Dimension, number> = {
       COMMUNICATION: 0,
       TEAMWORK: 0,
@@ -116,10 +135,14 @@ router.post('/:id/complete', async (req, res, next) => {
       EMOTIONAL: 0,
       LEADERSHIP: 0
     }
-    
-    assessment.answers.forEach(answer => {
-      if (answer.option) {
-        dimensionScores[answer.option.dimension] += answer.option.score
+
+    Object.keys(dimensionScoresMap).forEach(dim => {
+      const scores = dimensionScoresMap[dim as Dimension]
+      if (scores.length > 0) {
+        // 计算平均分并四舍五入
+        dimensionScores[dim as Dimension] = Math.round(
+          scores.reduce((sum, score) => sum + score, 0) / scores.length
+        )
       }
     })
     

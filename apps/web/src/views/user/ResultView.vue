@@ -134,7 +134,7 @@ import { useAssessmentStore } from '@/stores/assessment'
 import { assessmentApi } from '@/api/assessment'
 import { DimensionLabels } from '@career-assessment/shared'
 import type { Dimension, AssessmentResult } from '@career-assessment/shared'
-import { Radar } from 'vue-chartjs'
+import { Radar as RadarChart } from 'vue-chartjs'
 import {
   Chart as ChartJS,
   RadialLinearScale,
