@@ -1,8 +1,9 @@
-FROM node:20-alpine AS development
+FROM node:20-slim AS development
 
 WORKDIR /app
 
-# 安装 pnpm
+# 安装 pnpm 和 Prisma 依赖
+RUN apt-get update && apt-get install -y openssl libssl-dev && rm -rf /var/lib/apt/lists/*
 RUN npm install -g pnpm
 
 # 先复制 package.json
@@ -27,7 +28,7 @@ EXPOSE 3000
 CMD ["pnpm", "--filter", "api", "dev"]
 
 # 生产阶段
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 
 WORKDIR /app
 

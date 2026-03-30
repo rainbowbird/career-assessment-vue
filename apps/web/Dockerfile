@@ -8,6 +8,7 @@ RUN npm install -g pnpm
 # 复制配置文件
 COPY package*.json pnpm-workspace.yaml ./
 COPY apps/web/package*.json ./apps/web/
+COPY packages/shared/package*.json ./packages/shared/
 
 # 安装依赖
 RUN pnpm install
@@ -29,6 +30,7 @@ RUN npm install -g pnpm
 
 COPY package*.json pnpm-workspace.yaml ./
 COPY apps/web/package*.json ./apps/web/
+COPY packages/shared/package*.json ./packages/shared/
 
 RUN pnpm install --frozen-lockfile
 
