@@ -3,28 +3,28 @@ import type { ApiResponse, DashboardStats, AssessmentRecord } from '@career-asse
 
 export const adminApi = {
   // 登录
-  login: (password: string) =
-  apiClient.post<ApiResponse<{ token: string }>>('/admin/login', { password }),
+  login: (password: string) =>
+    apiClient.post<ApiResponse<{ token: string }>>('/admin/login', { password }),
   
   // 获取统计数据
-  getStats: () =
-  apiClient.get<ApiResponse<DashboardStats>>('/admin/stats'),
+  getStats: () =>
+    apiClient.get<ApiResponse<DashboardStats>>('/admin/stats'),
   
   // 获取测评列表
-  getAssessments: (params?: { page?: number; pageSize?: number; status?: string }) =
-  apiClient.get<ApiResponse<{ items: AssessmentRecord[]; total: number }>>('/admin/assessments', { params }),
+  getAssessments: (params?: { page?: number; pageSize?: number; status?: string }) =>
+    apiClient.get<ApiResponse<{ items: AssessmentRecord[]; total: number }>>('/admin/assessments', { params }),
   
   // 获取测评详情
-  getAssessmentDetail: (id: string) =
-  apiClient.get<ApiResponse>(`/admin/assessments/${id}`),
+  getAssessmentDetail: (id: string) =>
+    apiClient.get<ApiResponse>(`/admin/assessments/${id}`),
   
   // 更新审阅状态
-  updateReviewStatus: (id: string, status: string) =
-  apiClient.patch<ApiResponse>(`/admin/assessments/${id}/status`, { status }),
+  updateReviewStatus: (id: string, status: string) =>
+    apiClient.patch<ApiResponse>(`/admin/assessments/${id}/status`, { status }),
   
   // 发送邮件
-  sendEmail: (assessmentId: string, data: { to: string; subject: string; body: string }) =
-  apiClient.post<ApiResponse>(`/admin/assessments/${assessmentId}/send-email`, data),
+  sendEmail: (assessmentId: string, data: { to: string; subject: string; body: string }) =>
+    apiClient.post<ApiResponse>(`/admin/assessments/${assessmentId}/send-email`, data),
   
   // 检查 SMTP 配置
   checkSmtpConfig: () =>
@@ -53,6 +53,6 @@ export const adminApi = {
     }),
   
   // 修改密码
-  changePassword: (oldPassword: string, newPassword: string) =
-  apiClient.post<ApiResponse>('/admin/change-password', { oldPassword, newPassword })
+  changePassword: (oldPassword: string, newPassword: string) =>
+    apiClient.post<ApiResponse>('/admin/change-password', { oldPassword, newPassword })
 }
