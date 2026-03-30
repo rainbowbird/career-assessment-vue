@@ -56,7 +56,6 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:3000/api
       - CI=true
     volumes:
       - ./apps/web:/app/apps/web
