@@ -135,7 +135,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAssessmentStore } from '@/stores/assessment'
 import { assessmentApi } from '@/api/assessment'
-import { questionApi } from '@/api/question'
 import type { Question } from '@career-assessment/shared'
 
 const router = useRouter()
@@ -171,7 +170,7 @@ const isPaused = computed(() => assessmentStore.isPaused)
 // 方法
 const loadQuestions = async () => {
   try {
-    const response = await questionApi.getQuestions()
+    const response = await assessmentApi.getQuestions()
     if (response.data.success && response.data.data) {
       questions.value = response.data.data
       assessmentStore.setQuestions(questions.value)
