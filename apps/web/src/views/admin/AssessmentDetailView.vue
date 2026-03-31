@@ -278,43 +278,45 @@ const exportPDF = async () => {
       { key: 'LEADERSHIP', label: '领导力' }
     ]
 
-    // 根据分数获取颜色
+    // 根据分数获取颜色和评语
     const getScoreColor = (score: number) => {
-      if (score >= 85) return { bg: '#10b981', light: '#d1fae5', border: '#059669' } // 绿色 - 优秀
-      if (score >= 70) return { bg: '#3b82f6', light: '#dbeafe', border: '#2563eb' } // 蓝色 - 良好
-      if (score >= 60) return { bg: '#f59e0b', light: '#fef3c7', border: '#d97706' } // 橙色 - 中等
-      return { bg: '#ef4444', light: '#fee2e2', border: '#dc2626' } // 红色 - 待提升
+      if (score >= 80) return '#10b981' // 绿色
+      if (score >= 60) return '#3b82f6' // 蓝色
+      if (score >= 40) return '#f59e0b' // 橙色
+      return '#ef4444' // 红色
+    }
+
+    const getDimensionAnalysis = (dimension: string, score: number) => {
+      const label = DimensionLabels[dimension as Dimension] || dimension
+      if (score >= 80) {
+        return `该生在${label}方面表现优秀，具备良好的发展潜力。`
+      } else if (score >= 60) {
+        return `该生在${label}方面表现良好，还有一定的提升空间。`
+      } else {
+        return `该生在${label}方面有待加强，建议重点关注。`
+      }
     }
 
     const dimensionHtml = dimensions.map(dim => {
       const score = dimensionScores[dim.key] || 0
       const percentage = Math.min(score, 100)
-      const colors = getScoreColor(score)
+      const color = getScoreColor(score)
       
       return `
-        <div style="margin-bottom: 16px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-size: 15px; font-weight: 600; color: #1e293b;">${dim.label}</span>
-            <span style="background: ${colors.light}; color: ${colors.border}; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; border: 1px solid ${colors.border};">
-              ${score}分
+        <div style="margin-bottom: 16px; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #ffffff;">
+          <!-- 顶部区域 -->
+          <div style="background: #f8fafc; padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 16px; font-weight: 600; color: #1f2937;">${dim.label}</span>
+            <span style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 600;">
+              ${score}/100
             </span>
           </div>
-          <div style="position: relative; height: 28px; background: #f1f5f9; border-radius: 14px; overflow: hidden;">
-            <div style="position: absolute; top: 0; left: 0; height: 100%; width: ${percentage}%; 
-                        background: linear-gradient(90deg, ${colors.bg} 0%, ${colors.bg}dd 100%); 
-                        border-radius: 14px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);">
-              <div style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); 
-                          color: white; font-size: 12px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
-                ${percentage}%
-              </div>
+          <!-- 进度条区域 -->
+          <div style="padding: 20px;">
+            <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; margin-bottom: 12px; overflow: hidden;">
+              <div style="height: 100%; width: ${percentage}%; background: ${color}; border-radius: 4px; transition: width 0.3s;"></div>
             </div>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #64748b;">
-            <span>0分</span>
-            <span style="color: ${colors.border}; font-weight: 500;">
-              ${score >= 85 ? '★ 优秀' : score >= 70 ? '● 良好' : score >= 60 ? '○ 中等' : '△ 待提升'}
-            </span>
-            <span>100分</span>
+            <p style="font-size: 14px; color: #6b7280; margin: 0;">${getDimensionAnalysis(dim.key, score)}</p>
           </div>
         </div>
       `
