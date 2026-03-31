@@ -54,5 +54,9 @@ export const adminApi = {
   
   // 修改密码
   changePassword: (oldPassword: string, newPassword: string) =>
-    apiClient.post<ApiResponse>('/admin/change-password', { oldPassword, newPassword })
+    apiClient.post<ApiResponse>('/admin/change-password', { oldPassword, newPassword }),
+
+  // 删除测评记录
+  deleteAssessment: (id: string) =>
+    apiClient.delete<ApiResponse>(`/admin/assessments/${id}`)
 }

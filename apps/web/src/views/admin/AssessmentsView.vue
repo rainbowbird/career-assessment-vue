@@ -94,12 +94,19 @@
                     >
                       查看
                     </router-link>
-                    
+
                     <button
                       @click="openEmailModal(assessment)"
                       class="px-3 py-1 bg-secondary text-white text-sm rounded hover:bg-secondary/90 transition-all"
                     >
                       发送邮件
+                    </button>
+
+                    <button
+                      @click="confirmDelete(assessment)"
+                      class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-all"
+                    >
+                      删除
                     </button>
                   </div>
                 </td>
@@ -244,6 +251,27 @@ const exportData = async (format: 'pdf' | 'excel') => {
 const logout = () => {
   authStore.logout()
   router.push('/admin/login')
+}
+
+const confirmDelete = (assessment: AssessmentRecord) => {
+  if (confirm(`确定要删除 ${assessment.userName} 的测评记录吗？此操作不可恢复。`)) {
+    deleteAssessment(assessment.id)
+  }
+}
+
+const deleteAssessment = async (id: string) => {
+  try {
+    const response = await adminApi.deleteAssessment(id)
+    if (response.data.success) {
+      alert('删除成功')
+      loadAssessments() // 重新加载列表
+    } else {
+      alert(response.data.error || '删除失败')
+    }
+  } catch (error) {
+    console.error('删除测评记录失败:', error)
+    alert('删除失败，请稍后重试')
+  }
 }
 
 onMounted(() => {

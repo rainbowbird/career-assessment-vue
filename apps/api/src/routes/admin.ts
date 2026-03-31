@@ -204,6 +204,42 @@ router.get('/assessments/:id', async (req: AuthRequest, res, next) => {
   }
 })
 
+// 删除测评记录
+router.delete('/assessments/:id', async (req: AuthRequest, res, next) => {
+  try {
+    const { id } = req.params
+    
+    // 先检查测评是否存在
+    const assessment = await prisma.assessment.findUnique({
+      where: { id }
+    })
+    
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        error: '测评不存在'
+      })
+    }
+    
+    // 删除相关的答案记录
+    await prisma.answer.deleteMany({
+      where: { assessmentId: id }
+    })
+    
+    // 删除测评记录
+    await prisma.assessment.delete({
+      where: { id }
+    })
+    
+    res.json({
+      success: true,
+      message: '测评记录已删除'
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // 更新审阅状态
 router.patch('/assessments/:id/status', async (req: AuthRequest, res, next) => {
   try {
