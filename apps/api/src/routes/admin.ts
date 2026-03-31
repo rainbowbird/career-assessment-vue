@@ -657,63 +657,6 @@ router.get('/export/pdf/:id', async (req: AuthRequest, res, next) => {
   }
 })
 
-    if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        error: '测评不存在'
-      })
-    }
-
-    const dimensionScores = assessment.dimensionScores 
-      ? JSON.parse(assessment.dimensionScores as string) 
-      : {}
-
-    // 准备数据
-    const data = {
-      '姓名': assessment.user.name,
-      '专业': assessment.user.major,
-      '班级': assessment.user.class,
-      '学校': assessment.user.school,
-      '学历': assessment.user.education,
-      '邮箱': assessment.user.email,
-      '总分': assessment.totalScore,
-      '沟通表达': dimensionScores.COMMUNICATION || 0,
-      '团队协作': dimensionScores.TEAMWORK || 0,
-      '问题解决': dimensionScores.PROBLEM_SOLVING || 0,
-      '学习适应': dimensionScores.LEARNING || 0,
-      '职业认知': dimensionScores.CAREER_AWARENESS || 0,
-      '创新思维': dimensionScores.INNOVATION || 0,
-      '时间管理': dimensionScores.TIME_MANAGEMENT || 0,
-      '情绪管理': dimensionScores.EMOTIONAL || 0,
-      '领导力': dimensionScores.LEADERSHIP || 0,
-      '测评日期': assessment.createdAt.toLocaleDateString('zh-CN')
-    }
-
-    // 创建工作簿
-    const wb = XLSX.utils.book_new()
-    const ws = XLSX.utils.json_to_sheet([data])
-    
-    // 设置列宽
-    ws['!cols'] = [{ wch: 15 }, { wch: 20 }]
-
-    // 添加工作表到工作簿
-    XLSX.utils.book_append_sheet(wb, ws, '测评详情')
-
-    // 生成 Excel 文件
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
-    
-    // 设置响应头
-    const filename = `report_${assessment.user.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`)
-    
-    // 发送文件
-    res.send(buffer)
-  } catch (error) {
-    next(error)
-  }
-})
-
 // 检查 SMTP 配置
 router.get('/smtp/check', async (req: AuthRequest, res, next) => {
   try {
