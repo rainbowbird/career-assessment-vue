@@ -639,6 +639,35 @@ router.get('/export/pdf/:id', async (req: AuthRequest, res, next) => {
       ? JSON.parse(assessment.dimensionScores as string) 
       : {}
 
+    // 返回 JSON 数据，前端将使用 html2canvas 生成 PDF
+    res.json({
+      success: true,
+      data: {
+        id: assessment.id,
+        user: assessment.user,
+        totalScore: assessment.totalScore,
+        dimensionScores,
+        duration: assessment.duration,
+        createdAt: assessment.createdAt,
+        completedAt: assessment.completedAt
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        error: '测评不存在'
+      })
+    }
+
+    const dimensionScores = assessment.dimensionScores 
+      ? JSON.parse(assessment.dimensionScores as string) 
+      : {}
+
     // 准备数据
     const data = {
       '姓名': assessment.user.name,

@@ -23,7 +23,7 @@
       </div>
     </nav>
 
-    <main v-if="assessment" class="container mx-auto px-4 py-8 max-w-4xl">
+    <main v-if="assessment" ref="reportContainer" class="container mx-auto px-4 py-8 max-w-4xl bg-white">
       <!-- 头部信息 -->
       <div class="bg-white rounded-xl shadow-md p-6 mb-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -114,9 +114,12 @@
         
         <button
           @click="exportPDF"
-          class="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200"
+          :disabled="isGeneratingPDF"
+          class="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 disabled:opacity-50"
         >
-          <i class="fa-solid fa-file-export mr-2"></i>导出报告
+          <i v-if="!isGeneratingPDF" class="fa-solid fa-file-export mr-2"></i>
+          <i v-else class="fa-solid fa-spinner fa-spin mr-2"></i>
+          {{ isGeneratingPDF ? '生成中...' : '导出报告' }}
         </button>
       </div>
     </main>
@@ -141,6 +144,8 @@ import { adminApi } from '@/api/admin'
 import { DimensionLabels, EducationLabels } from '@career-assessment/shared'
 import type { Dimension } from '@career-assessment/shared'
 import EmailModal from '@/components/admin/EmailModal.vue'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 const route = useRoute()
 const router = useRouter()
@@ -150,6 +155,8 @@ const assessment = ref<any>(null)
 const isLoading = ref(false)
 const showEmailModal = ref(false)
 const smtpConfigured = ref(false)
+const reportContainer = ref<HTMLElement | null>(null)
+const isGeneratingPDF = ref(false)
 
 // 计算属性
 const dimensionScores = computed(() => {
@@ -209,39 +216,81 @@ const checkSmtpConfig = async () => {
   }
 }
 
-// 导出单条记录为 Excel（当前API返回Excel格式）
+// 导出报告为 PDF
 const exportPDF = async () => {
-  if (!assessment.value) return
-  
+  if (!assessment.value || !reportContainer.value || isGeneratingPDF.value) return
+
+  isGeneratingPDF.value = true
+
   try {
-    const response = await adminApi.exportSingleToPDF(assessment.value.id)
-    
-    // 从响应头获取文件名，或使用默认文件名
-    const contentDisposition = response.headers?.['content-disposition']
-    let filename = `report_${assessment.value.user.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
-    
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
-      if (filenameMatch && filenameMatch[1]) {
-        filename = filenameMatch[1].replace(/['"]/g, '')
-      }
-    }
-    
-    // 创建 Blob 并触发下载
-    const blob = new Blob([response.data], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    const userName = assessment.value.user.name
+
+    // 显示加载状态
+    const loadingDiv = document.createElement('div')
+    loadingDiv.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    `
+    loadingDiv.innerHTML = '<div style="background: white; padding: 20px; border-radius: 8px; font-weight: bold;">正在生成 PDF...</div>'
+    document.body.appendChild(loadingDiv)
+
+    // 使用 html2canvas 捕获页面
+    const canvas = await html2canvas(reportContainer.value, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
     })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
+
+    // 创建 PDF
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    const pdfWidth = pdf.internal.pageSize.getWidth()
+    const pdfHeight = pdf.internal.pageSize.getHeight()
+
+    const imgData = canvas.toDataURL('image/png')
+    const imgWidth = canvas.width
+    const imgHeight = canvas.height
+    const ratio = Math.min((pdfWidth - 20) / imgWidth, (pdfHeight - 20) / imgHeight)
+
+    const scaledWidth = imgWidth * ratio
+    const scaledHeight = imgHeight * ratio
+
+    // 如果内容超出一页，需要分页
+    let heightLeft = scaledHeight
+    let position = 10
+
+    // 添加第一页
+    pdf.addImage(imgData, 'PNG', 10, position, scaledWidth, scaledHeight)
+    heightLeft -= (pdfHeight - 20)
+
+    // 如果内容超过一页，添加更多页
+    while (heightLeft > 0) {
+      position = heightLeft - scaledHeight + 10
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 10, position, scaledWidth, scaledHeight)
+      heightLeft -= (pdfHeight - 20)
+    }
+
+    // 保存 PDF
+    pdf.save(`测评报告_${userName}_${new Date().toISOString().slice(0, 10)}.pdf`)
+
+    // 移除加载提示
+    document.body.removeChild(loadingDiv)
+
+    console.log('PDF 报告已生成并下载')
   } catch (error) {
-    console.error('导出失败:', error)
-    alert('导出失败，请稍后重试')
+    console.error('生成 PDF 失败:', error)
+    alert('生成 PDF 失败，请稍后重试')
+  } finally {
+    isGeneratingPDF.value = false
   }
 }
 
