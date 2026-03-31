@@ -82,7 +82,8 @@
 
       <!-- 专业分布 -->
       <div class="bg-white rounded-xl p-6 shadow-md border border-gray-100 mb-8">
-        <h3 class="font-semibold mb-4">专业分布</h3>
+        <h3 class="font-semibold mb-2">专业分布</h3>
+        <p class="text-sm text-gray-500 mb-4">显示参与测评的学生专业分布情况，帮助了解不同专业学生的测评参与度</p>
         <div class="h-64">
           <BarChart v-if="majorChartData" :data="majorChartData" :options="horizontalBarOptions" />
         </div>
@@ -127,6 +128,47 @@ import {
   Legend
 } from 'chart.js'
 
+// 注册 Chart.js 插件来显示数据标签
+const dataLabelsPlugin = {
+  id: 'dataLabels',
+  afterDatasetsDraw(chart: any) {
+    const { ctx } = chart
+    ctx.save()
+    ctx.font = 'bold 11px sans-serif'
+    ctx.fillStyle = '#333'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    chart.data.datasets.forEach((dataset: any, datasetIndex: number) => {
+      const meta = chart.getDatasetMeta(datasetIndex)
+      meta.data.forEach((element: any, index: number) => {
+        const value = dataset.data[index]
+        if (value !== undefined && value !== null && value > 0) {
+          const position = element.tooltipPosition()
+          
+          // 根据图表类型调整标签位置
+          if (chart.config.type === 'doughnut') {
+            // 环形图：显示在扇区中间
+            const angle = (element.startAngle + element.endAngle) / 2
+            const radius = (element.innerRadius + element.outerRadius) / 2
+            const x = element.x + Math.cos(angle) * radius
+            const y = element.y + Math.sin(angle) * radius
+            ctx.fillText(String(value), x, y)
+          } else if (chart.config.options && chart.config.options.indexAxis === 'y') {
+            // 水平柱状图：显示在柱子右侧
+            ctx.textAlign = 'left'
+            ctx.fillText(String(value), position.x + 5, position.y)
+          } else {
+            // 垂直柱状图：显示在柱子顶部
+            ctx.fillText(String(value), position.x, position.y - 10)
+          }
+        }
+      })
+    })
+    ctx.restore()
+  }
+}
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -134,7 +176,8 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  dataLabelsPlugin
 )
 
 const BarChart = Bar
