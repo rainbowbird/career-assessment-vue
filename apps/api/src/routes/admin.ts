@@ -657,15 +657,34 @@ router.get('/export/pdf/:id', async (req: AuthRequest, res, next) => {
   }
 })
 
-// 检查 SMTP 配置
+// 检查 SMTP 配置和连接状态
 router.get('/smtp/check', async (req: AuthRequest, res, next) => {
   try {
     const admin = await prisma.admin.findFirst()
-    const configured = admin?.smtpConfig ? true : false
+    
+    // 检查配置是否存在
+    if (!admin?.smtpConfig) {
+      return res.json({
+        success: true,
+        data: { 
+          configured: false,
+          connected: false,
+          message: 'SMTP 未配置'
+        }
+      })
+    }
+    
+    // 配置存在，测试连接是否可达
+    const config = admin.smtpConfig as any
+    const result = await testSMTPConnection(config)
     
     res.json({
       success: true,
-      data: { configured }
+      data: { 
+        configured: true,
+        connected: result.success,
+        message: result.success ? 'SMTP 服务正常' : (result.error || 'SMTP 连接失败')
+      }
     })
   } catch (error) {
     next(error)

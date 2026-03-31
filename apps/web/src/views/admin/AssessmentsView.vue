@@ -222,10 +222,12 @@ const checkSmtpConfig = async () => {
   try {
     const response = await adminApi.checkSmtpConfig()
     if (response.data.success && response.data.data) {
-      smtpConfigured.value = response.data.data.configured
+      // 只有当配置存在且连接测试通过时才启用邮件功能
+      smtpConfigured.value = response.data.data.configured && response.data.data.connected
     }
   } catch (error) {
     console.error('检查 SMTP 配置失败:', error)
+    smtpConfigured.value = false
   }
 }
 
