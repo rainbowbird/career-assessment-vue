@@ -4,7 +4,7 @@ import type { ApiResponse, DashboardStats, AssessmentRecord } from '@career-asse
 export const adminApi = {
   // 登录
   login: (password: string) =>
-    apiClient.post<ApiResponse<{ token: string }>>('/admin/login', { password }),
+    apiClient.post<ApiResponse<{ token: string }>>('/auth/login', { password }),
   
   // 获取统计数据
   getStats: () =>
