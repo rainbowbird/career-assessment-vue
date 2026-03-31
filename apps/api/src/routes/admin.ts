@@ -607,7 +607,8 @@ router.get('/export/excel', async (req: AuthRequest, res, next) => {
     
     // 设置响应头
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition', `attachment; filename=测评记录_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    const filename = `assessments_${new Date().toISOString().slice(0, 10)}.xlsx`
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`)
     
     // 发送文件
     res.send(buffer)
@@ -674,8 +675,9 @@ router.get('/export/pdf/:id', async (req: AuthRequest, res, next) => {
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
     
     // 设置响应头
+    const filename = `report_${assessment.user.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition', `attachment; filename=测评报告_${assessment.user.name}_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`)
     
     // 发送文件
     res.send(buffer)

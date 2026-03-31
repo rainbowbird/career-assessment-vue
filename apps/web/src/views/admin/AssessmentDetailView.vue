@@ -120,6 +120,16 @@
         </button>
       </div>
     </main>
+
+    <!-- 邮件发送弹窗 -->
+    <EmailModal
+      :show="showEmailModal"
+      :assessment-id="assessment?.id || ''"
+      :default-to="assessment?.user?.email"
+      :smtp-configured="smtpConfigured"
+      @close="showEmailModal = false"
+      @sent="loadAssessment"
+    />
   </div>
 </template>
 
@@ -264,14 +274,3 @@ onMounted(() => {
   checkSmtpConfig()
 })
 </script>
-
-<!-- 邮件发送弹窗 -->
-<EmailModal
-    :show="showEmailModal"
-    :assessment-id="assessment?.id || ''"
-    :default-to="assessment?.user?.email"
-    :smtp-configured="smtpConfigured"
-    @close="showEmailModal = false"
-    @sent="loadAssessment"
-  />
-</template>
