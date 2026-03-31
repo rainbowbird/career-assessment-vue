@@ -53,25 +53,27 @@
             <h3 class="font-semibold text-green-700 mb-3 flex items-center">
               <i class="fa-solid fa-circle-plus mr-2"></i> 主要优势
             </h3>
-            <ul class="space-y-2 text-sm">
+            <ul v-if="strengths.length > 0" class="space-y-2 text-sm">
               <li v-for="strength in strengths" :key="strength" class="flex items-start">
                 <i class="fa-solid fa-check text-green-500 mt-1 mr-2"></i>
                 <span>{{ getDimensionLabel(strength) }}</span>
               </li>
             </ul>
+            <p v-else class="text-sm text-gray-500">暂无数据</p>
           </div>
-          
+
           <!-- 不足 -->
           <div class="bg-amber-50 rounded-xl p-5 border border-amber-100">
             <h3 class="font-semibold text-amber-700 mb-3 flex items-center">
               <i class="fa-solid fa-circle-exclamation mr-2"></i> 待提升领域
             </h3>
-            <ul class="space-y-2 text-sm">
+            <ul v-if="weaknesses.length > 0" class="space-y-2 text-sm">
               <li v-for="weakness in weaknesses" :key="weakness" class="flex items-start">
                 <i class="fa-solid fa-arrow-up text-amber-500 mt-1 mr-2"></i>
                 <span>{{ getDimensionLabel(weakness) }}</span>
               </li>
             </ul>
+            <p v-else class="text-sm text-gray-500">暂无数据</p>
           </div>
         </div>
 
@@ -180,9 +182,16 @@ const ratingClass = computed(() => {
   return 'bg-red-100 text-red-800'
 })
 
-// 优势和不足
-const strengths = computed(() => result.value?.strengths?.slice(0, 3) || [])
-const weaknesses = computed(() => result.value?.weaknesses?.slice(-3).reverse() || [])
+// 优势和不足 - 添加调试日志
+const strengths = computed(() => {
+  console.log('Result data:', result.value)
+  console.log('Strengths:', result.value?.strengths)
+  return result.value?.strengths?.slice(0, 3) || []
+})
+const weaknesses = computed(() => {
+  console.log('Weaknesses:', result.value?.weaknesses)
+  return result.value?.weaknesses?.slice(-3).reverse() || []
+})
 
 const getDimensionLabel = (dimension: Dimension | string) => {
   return DimensionLabels[dimension as Dimension] || dimension
@@ -260,18 +269,19 @@ onMounted(async () => {
     router.push('/')
     return
   }
-  
-  // 如果 store 中没有结果，从 API 获取
-  if (!assessmentStore.result) {
-    try {
-      const response = await assessmentApi.getResult(assessmentStore.assessmentId)
-      if (response.data.success && response.data.data) {
-        assessmentStore.calculateResult(response.data.data as AssessmentResult)
-      }
-    } catch (error) {
-      console.error('获取结果失败:', error)
-      alert('获取结果失败，请稍后重试')
+
+  // 总是从 API 获取最新结果数据（确保包含 strengths/weaknesses）
+  try {
+    console.log('Fetching result for assessment:', assessmentStore.assessmentId)
+    const response = await assessmentApi.getResult(assessmentStore.assessmentId)
+    console.log('API response:', response.data)
+    if (response.data.success && response.data.data) {
+      assessmentStore.calculateResult(response.data.data as AssessmentResult)
+      console.log('Result stored in store:', assessmentStore.result)
     }
+  } catch (error) {
+    console.error('获取结果失败:', error)
+    alert('获取结果失败，请稍后重试')
   }
 })
 </script>

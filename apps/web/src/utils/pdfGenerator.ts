@@ -167,30 +167,40 @@ export function generateSimplePDF(result: AssessmentResult, userName: string): v
   pdf.setTextColor(16, 185, 129)
   pdf.text('主要优势', margin, y)
   y += 10
-  
+
   pdf.setFontSize(11)
   pdf.setTextColor(0, 0, 0)
-  
-  result.strengths.forEach((strength, index) => {
-    pdf.text(`${index + 1}. ${strength}`, margin + 5, y)
+
+  if (result.strengths && result.strengths.length > 0) {
+    result.strengths.forEach((strength, index) => {
+      pdf.text(`${index + 1}. ${strength}`, margin + 5, y)
+      y += 8
+    })
+  } else {
+    pdf.text('暂无数据', margin + 5, y)
     y += 8
-  })
-  
+  }
+
   y += 10
-  
+
   // 待提升领域
   pdf.setFontSize(16)
   pdf.setTextColor(245, 158, 11)
   pdf.text('待提升领域', margin, y)
   y += 10
-  
+
   pdf.setFontSize(11)
   pdf.setTextColor(0, 0, 0)
-  
-  result.weaknesses.forEach((weakness, index) => {
-    pdf.text(`${index + 1}. ${weakness}`, margin + 5, y)
+
+  if (result.weaknesses && result.weaknesses.length > 0) {
+    result.weaknesses.forEach((weakness, index) => {
+      pdf.text(`${index + 1}. ${weakness}`, margin + 5, y)
+      y += 8
+    })
+  } else {
+    pdf.text('暂无数据', margin + 5, y)
     y += 8
-  })
+  }
   
   y += 15
   
