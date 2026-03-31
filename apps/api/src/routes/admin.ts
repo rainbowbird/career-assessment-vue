@@ -50,15 +50,15 @@ router.get('/stats', async (req: AuthRequest, res, next) => {
     })
     
     const dimensionAverages: Record<Dimension, number> = {
-      COMMUNICATION: totalAssessments > 0 ? Math.round(dimensionSums.COMMUNICATION / totalAssessments) : 0,
-      TEAMWORK: totalAssessments > 0 ? Math.round(dimensionSums.TEAMWORK / totalAssessments) : 0,
-      PROBLEM_SOLVING: totalAssessments > 0 ? Math.round(dimensionSums.PROBLEM_SOLVING / totalAssessments) : 0,
-      LEARNING: totalAssessments > 0 ? Math.round(dimensionSums.LEARNING / totalAssessments) : 0,
-      CAREER_AWARENESS: totalAssessments > 0 ? Math.round(dimensionSums.CAREER_AWARENESS / totalAssessments) : 0,
-      INNOVATION: totalAssessments > 0 ? Math.round(dimensionSums.INNOVATION / totalAssessments) : 0,
-      TIME_MANAGEMENT: totalAssessments > 0 ? Math.round(dimensionSums.TIME_MANAGEMENT / totalAssessments) : 0,
-      EMOTIONAL: totalAssessments > 0 ? Math.round(dimensionSums.EMOTIONAL / totalAssessments) : 0,
-      LEADERSHIP: totalAssessments > 0 ? Math.round(dimensionSums.LEADERSHIP / totalAssessments) : 0
+      COMMUNICATION: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.COMMUNICATION / totalAssessments)) : 0,
+      TEAMWORK: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.TEAMWORK / totalAssessments)) : 0,
+      PROBLEM_SOLVING: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.PROBLEM_SOLVING / totalAssessments)) : 0,
+      LEARNING: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.LEARNING / totalAssessments)) : 0,
+      CAREER_AWARENESS: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.CAREER_AWARENESS / totalAssessments)) : 0,
+      INNOVATION: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.INNOVATION / totalAssessments)) : 0,
+      TIME_MANAGEMENT: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.TIME_MANAGEMENT / totalAssessments)) : 0,
+      EMOTIONAL: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.EMOTIONAL / totalAssessments)) : 0,
+      LEADERSHIP: totalAssessments > 0 ? Math.min(100, Math.round(dimensionSums.LEADERSHIP / totalAssessments)) : 0
     }
     
     // 成绩分布
@@ -85,10 +85,19 @@ router.get('/stats', async (req: AuthRequest, res, next) => {
       }))
     )
     
-    // 专业分布
+    // 专业分布 - 只统计已完成测评的用户
     const majorDistribution = await prisma.user.groupBy({
       by: ['major'],
-      _count: { major: true }
+      where: {
+        assessments: {
+          some: {
+            status: 'COMPLETED'
+          }
+        }
+      },
+      _count: { 
+        major: true
+      }
     })
     
     res.json({

@@ -274,7 +274,13 @@ const horizontalBarOptions = {
   indexAxis: 'y' as const,
   scales: {
     x: {
-      beginAtZero: true
+      beginAtZero: true,
+      ticks: {
+        stepSize: 1,
+        callback: function(value: number) {
+          return Number.isInteger(value) ? value : ''
+        }
+      }
     }
   }
 }
