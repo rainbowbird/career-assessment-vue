@@ -173,7 +173,6 @@ router.get('/assessments/:id', async (req: AuthRequest, res, next) => {
         user: true,
         answers: {
           include: {
-            question: true,
             option: true
           }
         }

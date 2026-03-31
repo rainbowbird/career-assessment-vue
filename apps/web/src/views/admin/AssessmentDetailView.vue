@@ -116,7 +116,7 @@
           @click="exportPDF"
           class="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200"
         >
-          <i class="fa-solid fa-file-pdf mr-2"></i>导出PDF
+          <i class="fa-solid fa-file-export mr-2"></i>导出报告
         </button>
       </div>
     </main>
@@ -209,11 +209,23 @@ const checkSmtpConfig = async () => {
   }
 }
 
+// 导出单条记录为 Excel（当前API返回Excel格式）
 const exportPDF = async () => {
   if (!assessment.value) return
   
   try {
     const response = await adminApi.exportSingleToPDF(assessment.value.id)
+    
+    // 从响应头获取文件名，或使用默认文件名
+    const contentDisposition = response.headers?.['content-disposition']
+    let filename = `report_${assessment.value.user.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '')
+      }
+    }
     
     // 创建 Blob 并触发下载
     const blob = new Blob([response.data], { 
@@ -222,7 +234,7 @@ const exportPDF = async () => {
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `测评报告_${assessment.value.user.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
