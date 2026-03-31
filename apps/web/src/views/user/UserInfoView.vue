@@ -152,13 +152,33 @@ const submitForm = async () => {
   try {
     assessmentStore.setUserInfo(form)
     const response = await assessmentApi.createAssessment(form)
+
     if (response.data.success) {
-      assessmentStore.startAssessment(response.data.data.id)
-      router.push('/assessment')
+      const data = response.data.data
+
+      if (data.isExisting) {
+        // 有未完成的测评，询问是否继续
+        if (confirm('您有未完成的测评记录，是否继续？')) {
+          assessmentStore.startAssessment(data.id)
+          router.push('/assessment')
+        }
+      } else {
+        // 新创建的测评
+        assessmentStore.startAssessment(data.id)
+        router.push('/assessment')
+      }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('创建测评失败:', error)
-    alert('创建测评失败，请稍后重试')
+
+    // 处理已完成测评的情况
+    if (error.response?.data?.code === 'ALREADY_COMPLETED') {
+      alert('您已完成测评，每人仅限一次测评机会。')
+      // 可以在这里添加跳转到结果查看页面的逻辑
+      return
+    }
+
+    alert(error.response?.data?.error || '创建测评失败，请稍后重试')
   }
 }
 

@@ -6,7 +6,7 @@ import type { Dimension } from '@career-assessment/shared'
 
 const router = Router()
 
-// 创建测评
+// 创建测评（每人一份数据模式）
 router.post('/', async (req, res, next) => {
   try {
     const schema = z.object({
@@ -18,20 +18,69 @@ router.post('/', async (req, res, next) => {
       phone: z.string().min(1),
       education: z.enum(['BACHELOR', 'MASTER', 'DOCTOR', 'COLLEGE'])
     })
-    
+
     const data = schema.parse(req.body)
-    
-    const user = await prisma.user.create({
-      data
+
+    // 检查是否已存在该邮箱的用户
+    let user = await prisma.user.findUnique({
+      where: { email: data.email }
     })
-    
+
+    if (user) {
+      // 用户已存在，检查是否已有测评记录
+      const existingAssessment = await prisma.assessment.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      if (existingAssessment) {
+        if (existingAssessment.status === 'COMPLETED') {
+          // 已有完成的测评，不允许重复创建
+          return res.status(400).json({
+            success: false,
+            error: '您已完成测评，每人仅限一次测评机会',
+            code: 'ALREADY_COMPLETED'
+          })
+        } else {
+          // 有未完成的测评，返回继续测评
+          return res.status(200).json({
+            success: true,
+            data: {
+              id: existingAssessment.id,
+              message: '继续之前的测评',
+              isExisting: true
+            }
+          })
+        }
+      }
+
+      // 用户存在但没有测评记录，更新用户信息并创建新测评
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: data.name,
+          major: data.major,
+          class: data.class,
+          school: data.school,
+          phone: data.phone,
+          education: data.education
+        }
+      })
+    } else {
+      // 创建新用户
+      user = await prisma.user.create({
+        data
+      })
+    }
+
+    // 创建测评记录
     const assessment = await prisma.assessment.create({
       data: {
         userId: user.id,
         startedAt: new Date()
       }
     })
-    
+
     res.status(201).json({
       success: true,
       data: { id: assessment.id }

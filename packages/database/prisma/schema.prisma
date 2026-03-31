@@ -16,13 +16,15 @@ model User {
   name          String
   major         String
   class         String
-  email         String
+  email         String        @unique
   school        String
   phone         String
   education     Education
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   assessments   Assessment[]
+
+  @@index([email])
 }
 
 // 测评记录
