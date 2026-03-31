@@ -238,15 +238,15 @@ const chartOptions = {
 // 方法
 const downloadReport = async () => {
   if (!result.value || isGeneratingPDF.value) return
-  
+
   isGeneratingPDF.value = true
-  
+
   try {
     const userName = assessmentStore.userInfo?.name || '未知用户'
-    
-    // 使用简单 PDF 生成方法
-    generateSimplePDF(result.value, userName)
-    
+
+    // 使用简单 PDF 生成方法（现在是异步的）
+    await generateSimplePDF(result.value, userName)
+
     console.log('PDF 报告已生成并下载')
   } catch (error) {
     console.error('生成 PDF 失败:', error)
