@@ -23,7 +23,7 @@
       </div>
     </nav>
 
-    <main v-if="assessment" ref="reportContainer" class="container mx-auto px-4 py-8 max-w-4xl bg-white">
+    <main v-if="assessment" class="container mx-auto px-4 py-8 max-w-4xl bg-white">
       <!-- 头部信息 -->
       <div class="bg-white rounded-xl shadow-md p-6 mb-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -96,7 +96,7 @@
       </div>
 
       <!-- 操作按钮 -->
-      <div class="bg-white rounded-xl shadow-md p-6 flex flex-wrap justify-center gap-4 no-print">
+      <div class="bg-white rounded-xl shadow-md p-6 flex flex-wrap justify-center gap-4">
         <button
           @click="updateStatus('REVIEWED')"
           :disabled="assessment.reviewStatus === 'REVIEWED'"
@@ -155,7 +155,6 @@ const assessment = ref<any>(null)
 const isLoading = ref(false)
 const showEmailModal = ref(false)
 const smtpConfigured = ref(false)
-const reportContainer = ref<HTMLElement | null>(null)
 const isGeneratingPDF = ref(false)
 
 // 计算属性
@@ -218,7 +217,7 @@ const checkSmtpConfig = async () => {
 
 // 导出报告为 PDF
 const exportPDF = async () => {
-  if (!assessment.value || !reportContainer.value || isGeneratingPDF.value) return
+  if (!assessment.value || isGeneratingPDF.value) return
 
   isGeneratingPDF.value = true
 
@@ -242,23 +241,108 @@ const exportPDF = async () => {
     loadingDiv.innerHTML = '<div style="background: white; padding: 20px; border-radius: 8px; font-weight: bold;">正在生成 PDF...</div>'
     document.body.appendChild(loadingDiv)
 
-    // 隐藏操作按钮（导出PDF时不包含这些按钮）
-    const noPrintElements = reportContainer.value.querySelectorAll('.no-print')
-    noPrintElements.forEach(el => {
-      (el as HTMLElement).style.display = 'none'
-    })
+    // 创建临时容器生成PDF内容
+    const container = document.createElement('div')
+    container.style.cssText = `
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      width: 800px;
+      padding: 40px;
+      background: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    `
 
-    // 使用 html2canvas 捕获页面
-    const canvas = await html2canvas(reportContainer.value, {
+    // 获取用户详细信息
+    const user = assessment.value.user
+    const totalScore = assessment.value.totalScore || 0
+    const dimensionScores = assessment.value.dimensionScores || {}
+
+    // 获取评级
+    let ratingText = ''
+    if (totalScore >= 90) ratingText = '优秀'
+    else if (totalScore >= 80) ratingText = '良好'
+    else if (totalScore >= 70) ratingText = '中等'
+    else ratingText = '待提升'
+
+    // 构建维度得分 HTML
+    const dimensions = [
+      { key: 'COMMUNICATION', label: '沟通表达' },
+      { key: 'TEAMWORK', label: '团队协作' },
+      { key: 'PROBLEM_SOLVING', label: '问题解决' },
+      { key: 'LEARNING', label: '学习适应' },
+      { key: 'CAREER_AWARENESS', label: '职业认知' },
+      { key: 'INNOVATION', label: '创新思维' },
+      { key: 'TIME_MANAGEMENT', label: '时间管理' },
+      { key: 'EMOTIONAL', label: '情绪管理' },
+      { key: 'LEADERSHIP', label: '领导力' }
+    ]
+
+    const dimensionHtml = dimensions.map(dim => {
+      const score = dimensionScores[dim.key] || 0
+      const percentage = Math.min(score, 100)
+      return `
+        <div style="margin-bottom: 12px; display: flex; align-items: center;">
+          <span style="width: 100px; font-size: 14px; color: #333;">${dim.label}</span>
+          <div style="flex: 1; height: 20px; background: #e5e7eb; border-radius: 10px; overflow: hidden; margin: 0 10px;">
+            <div style="width: ${percentage}%; height: 100%; background: #3b82f6; border-radius: 10px;"></div>
+          </div>
+          <span style="width: 50px; font-size: 14px; color: #666; text-align: right;">${score}分</span>
+        </div>
+      `
+    }).join('')
+
+    // 构建 HTML 内容
+    container.innerHTML = `
+      <div style="max-width: 720px; margin: 0 auto;">
+        <h1 style="text-align: center; color: #3b82f6; font-size: 28px; margin-bottom: 10px; font-weight: bold;">
+          学生职场潜能测评报告
+        </h1>
+
+        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="font-size: 16px; color: #64748b; margin-bottom: 15px; font-weight: bold;">基本信息</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: #333;">
+            <div><strong>姓名：</strong>${user.name}</div>
+            <div><strong>专业：</strong>${user.major}</div>
+            <div><strong>班级：</strong>${user.class}</div>
+            <div><strong>学校：</strong>${user.school}</div>
+            <div><strong>学历：</strong>${getEducationLabel(user.education)}</div>
+            <div><strong>电话：</strong>${user.phone}</div>
+            <div><strong>邮箱：</strong>${user.email}</div>
+            <div><strong>测评日期：</strong>${new Date(assessment.value.createdAt).toLocaleDateString('zh-CN')}</div>
+          </div>
+        </div>
+
+        <div style="background: #f0f7ff; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+          <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">
+            总体评分: ${totalScore}/100
+          </div>
+          <div style="font-size: 16px; color: #3b82f6;">
+            评级: ${ratingText}
+          </div>
+        </div>
+
+        <h2 style="font-size: 18px; color: #3b82f6; margin-bottom: 15px; font-weight: bold;">各维度得分</h2>
+        <div style="margin-bottom: 30px;">
+          ${dimensionHtml}
+        </div>
+
+        <div style="font-size: 11px; color: #666; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          免责声明：本报告仅根据本次测评的回答内容进行分析，不代表公司对候选人的最终评价。
+        </div>
+      </div>
+    `
+
+    document.body.appendChild(container)
+
+    // 使用 html2canvas 渲染
+    const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
       logging: false,
-      backgroundColor: '#ffffff'
-    })
-
-    // 恢复操作按钮显示
-    noPrintElements.forEach(el => {
-      (el as HTMLElement).style.display = ''
+      backgroundColor: '#ffffff',
+      width: 800,
+      height: container.scrollHeight
     })
 
     // 创建 PDF
@@ -291,10 +375,11 @@ const exportPDF = async () => {
     }
 
     // 保存 PDF
-    pdf.save(`测评报告_${userName}_${new Date().toISOString().slice(0, 10)}.pdf`)
+    pdf.save(`测评报告_${user.name}_${new Date().toISOString().slice(0, 10)}.pdf`)
 
-    // 移除加载提示
+    // 移除临时元素
     document.body.removeChild(loadingDiv)
+    document.body.removeChild(container)
 
     console.log('PDF 报告已生成并下载')
   } catch (error) {

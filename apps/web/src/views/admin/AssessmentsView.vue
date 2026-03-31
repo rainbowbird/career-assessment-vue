@@ -47,12 +47,6 @@
           >
             <i class="fa-solid fa-file-excel mr-1"></i> 导出 Excel
           </button>
-          <button
-            @click="exportData('pdf')"
-            class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200"
-          >
-            <i class="fa-solid fa-file-pdf mr-1"></i> 导出 PDF
-          </button>
         </div>
       </div>
 
@@ -154,10 +148,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
-import { ReviewStatusLabels, DimensionLabels } from '@career-assessment/shared'
+import { ReviewStatusLabels } from '@career-assessment/shared'
 import type { AssessmentRecord } from '@career-assessment/shared'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -169,7 +161,6 @@ const pageSize = ref(20)
 const total = ref(0)
 const filterStatus = ref('')
 const isLoading = ref(false)
-const exportingId = ref<string | null>(null)
 
 // 计算属性
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
@@ -227,152 +218,6 @@ const getStatusClass = (status: string) => {
 const openEmailModal = (assessment: AssessmentRecord) => {
   // TODO: 实现邮件发送弹窗
   alert(`发送邮件给: ${assessment.userName}`)
-}
-
-// 导出单个测评为 PDF
-const exportSinglePDF = async (assessment: AssessmentRecord) => {
-  if (exportingId.value) return
-
-  exportingId.value = assessment.id
-
-  try {
-    // 获取测评详情
-    const response = await adminApi.getAssessmentDetail(assessment.id)
-    if (!response.data.success || !response.data.data) {
-      alert('获取测评数据失败')
-      return
-    }
-
-    const detail = response.data.data
-    const userName = detail.user.name
-
-    // 创建临时容器
-    const container = document.createElement('div')
-    container.style.cssText = `
-      position: fixed;
-      left: -9999px;
-      top: 0;
-      width: 800px;
-      padding: 40px;
-      background: white;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    `
-
-    // 获取评级
-    const totalScore = detail.totalScore || 0
-    let ratingText = ''
-    if (totalScore >= 90) ratingText = '优秀'
-    else if (totalScore >= 80) ratingText = '良好'
-    else if (totalScore >= 70) ratingText = '中等'
-    else ratingText = '待提升'
-
-    // 构建维度得分 HTML
-    const dimensionScores = detail.dimensionScores || {}
-    const dimensions = [
-      { key: 'COMMUNICATION', label: '沟通表达' },
-      { key: 'TEAMWORK', label: '团队协作' },
-      { key: 'PROBLEM_SOLVING', label: '问题解决' },
-      { key: 'LEARNING', label: '学习适应' },
-      { key: 'CAREER_AWARENESS', label: '职业认知' },
-      { key: 'INNOVATION', label: '创新思维' },
-      { key: 'TIME_MANAGEMENT', label: '时间管理' },
-      { key: 'EMOTIONAL', label: '情绪管理' },
-      { key: 'LEADERSHIP', label: '领导力' }
-    ]
-
-    const dimensionHtml = dimensions.map(dim => {
-      const score = dimensionScores[dim.key] || 0
-      const percentage = Math.min(score, 100)
-      return `
-        <div style="margin-bottom: 12px; display: flex; align-items: center;">
-          <span style="width: 100px; font-size: 14px; color: #333;">${dim.label}</span>
-          <div style="flex: 1; height: 20px; background: #e5e7eb; border-radius: 10px; overflow: hidden; margin: 0 10px;">
-            <div style="width: ${percentage}%; height: 100%; background: #3b82f6; border-radius: 10px;"></div>
-          </div>
-          <span style="width: 50px; font-size: 14px; color: #666; text-align: right;">${score}分</span>
-        </div>
-      `
-    }).join('')
-
-    // 构建 HTML 内容
-    container.innerHTML = `
-      <div style="max-width: 720px; margin: 0 auto;">
-        <h1 style="text-align: center; color: #3b82f6; font-size: 28px; margin-bottom: 10px; font-weight: bold;">
-          学生职场潜能测评报告
-        </h1>
-
-        <div style="display: flex; justify-content: space-between; margin-bottom: 30px; color: #666; font-size: 14px;">
-          <span>姓名: ${userName}</span>
-          <span>测评日期: ${new Date(detail.createdAt).toLocaleDateString('zh-CN')}</span>
-        </div>
-
-        <div style="background: #f0f7ff; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-          <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">
-            总体评分: ${totalScore}/100
-          </div>
-          <div style="font-size: 16px; color: #3b82f6;">
-            评级: ${ratingText}
-          </div>
-        </div>
-
-        <h2 style="font-size: 18px; color: #3b82f6; margin-bottom: 15px; font-weight: bold;">各维度得分</h2>
-        <div style="margin-bottom: 30px;">
-          ${dimensionHtml}
-        </div>
-
-        <div style="font-size: 11px; color: #666; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-          免责声明：本报告仅根据本次测评的回答内容进行分析，不代表公司对候选人的最终评价。
-        </div>
-      </div>
-    `
-
-    document.body.appendChild(container)
-
-    // 使用 html2canvas 渲染
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      width: 800,
-      height: container.scrollHeight
-    })
-
-    // 创建 PDF
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = pdf.internal.pageSize.getHeight()
-
-    const imgData = canvas.toDataURL('image/png')
-    const imgWidth = canvas.width
-    const imgHeight = canvas.height
-    const ratio = Math.min((pdfWidth - 20) / imgWidth, (pdfHeight - 20) / imgHeight)
-
-    const scaledWidth = imgWidth * ratio
-    const scaledHeight = imgHeight * ratio
-
-    let heightLeft = scaledHeight
-    let position = 10
-
-    pdf.addImage(imgData, 'PNG', 10, position, scaledWidth, scaledHeight)
-    heightLeft -= (pdfHeight - 20)
-
-    while (heightLeft > 0) {
-      position = heightLeft - scaledHeight + 10
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 10, position, scaledWidth, scaledHeight)
-      heightLeft -= (pdfHeight - 20)
-    }
-
-    pdf.save(`测评报告_${userName}_${new Date().toISOString().slice(0, 10)}.pdf`)
-
-    document.body.removeChild(container)
-  } catch (error) {
-    console.error('导出 PDF 失败:', error)
-    alert('导出 PDF 失败，请稍后重试')
-  } finally {
-    exportingId.value = null
-  }
 }
 
 const exportData = async (format: 'pdf' | 'excel') => {
