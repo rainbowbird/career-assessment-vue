@@ -91,7 +91,9 @@
 
                     <button
                       @click="openEmailModal(assessment)"
-                      class="px-3 py-1 bg-secondary text-white text-sm rounded hover:bg-secondary/90 transition-all"
+                      :disabled="!smtpConfigured"
+                      :title="smtpConfigured ? '发送邮件通知' : '请先配置 SMTP 服务'"
+                      class="px-3 py-1 bg-secondary text-white text-sm rounded hover:bg-secondary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       发送邮件
                     </button>
@@ -161,6 +163,7 @@ const pageSize = ref(20)
 const total = ref(0)
 const filterStatus = ref('')
 const isLoading = ref(false)
+const smtpConfigured = ref(false)
 
 // 计算属性
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
@@ -212,6 +215,17 @@ const getStatusClass = (status: string) => {
       return 'bg-green-100 text-green-800'
     default:
       return 'bg-gray-100 text-gray-800'
+  }
+}
+
+const checkSmtpConfig = async () => {
+  try {
+    const response = await adminApi.checkSmtpConfig()
+    if (response.data.success && response.data.data) {
+      smtpConfigured.value = response.data.data.configured
+    }
+  } catch (error) {
+    console.error('检查 SMTP 配置失败:', error)
   }
 }
 
@@ -270,5 +284,6 @@ const deleteAssessment = async (id: string) => {
 
 onMounted(() => {
   loadAssessments()
+  checkSmtpConfig()
 })
 </script>

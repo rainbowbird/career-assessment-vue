@@ -23,6 +23,23 @@
       </div>
     </nav>
 
+    <!-- SMTP 配置提示 -->
+    <div v-if="!smtpConfigured && assessment" class="bg-amber-50 border-l-4 border-amber-400 p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm text-amber-700">
+            <span class="font-medium">提示：</span> SMTP 服务未配置，无法发送邮件通知。
+            <router-link to="/admin/settings" class="font-medium underline hover:text-amber-600">
+              前往配置 SMTP
+            </router-link>
+          </p>
+        </div>
+      </div>
+    </div>
+
     <main v-if="assessment" class="container mx-auto px-4 py-8 max-w-4xl bg-white">
       <!-- 头部信息 -->
       <div class="bg-white rounded-xl shadow-md p-6 mb-6">
@@ -107,7 +124,9 @@
         
         <button
           @click="openEmailModal"
-          class="px-6 py-3 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-all duration-200"
+          :disabled="!smtpConfigured"
+          :title="smtpConfigured ? '发送邮件通知' : '请先配置 SMTP 服务'"
+          class="px-6 py-3 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <i class="fa-solid fa-envelope mr-2"></i>发送邮件
         </button>
