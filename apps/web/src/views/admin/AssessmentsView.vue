@@ -96,16 +96,6 @@
                     </router-link>
 
                     <button
-                      @click="exportSinglePDF(assessment)"
-                      :disabled="exportingId === assessment.id"
-                      class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-all disabled:opacity-50"
-                    >
-                      <i v-if="exportingId !== assessment.id" class="fa-solid fa-file-pdf mr-1"></i>
-                      <i v-else class="fa-solid fa-spinner fa-spin mr-1"></i>
-                      {{ exportingId === assessment.id ? '导出中...' : '导出PDF' }}
-                    </button>
-
-                    <button
                       @click="openEmailModal(assessment)"
                       class="px-3 py-1 bg-secondary text-white text-sm rounded hover:bg-secondary/90 transition-all"
                     >

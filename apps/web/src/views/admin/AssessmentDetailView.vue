@@ -96,7 +96,7 @@
       </div>
 
       <!-- 操作按钮 -->
-      <div class="bg-white rounded-xl shadow-md p-6 flex flex-wrap justify-center gap-4">
+      <div class="bg-white rounded-xl shadow-md p-6 flex flex-wrap justify-center gap-4 no-print">
         <button
           @click="updateStatus('REVIEWED')"
           :disabled="assessment.reviewStatus === 'REVIEWED'"
@@ -242,12 +242,23 @@ const exportPDF = async () => {
     loadingDiv.innerHTML = '<div style="background: white; padding: 20px; border-radius: 8px; font-weight: bold;">正在生成 PDF...</div>'
     document.body.appendChild(loadingDiv)
 
+    // 隐藏操作按钮（导出PDF时不包含这些按钮）
+    const noPrintElements = reportContainer.value.querySelectorAll('.no-print')
+    noPrintElements.forEach(el => {
+      (el as HTMLElement).style.display = 'none'
+    })
+
     // 使用 html2canvas 捕获页面
     const canvas = await html2canvas(reportContainer.value, {
       scale: 2,
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff'
+    })
+
+    // 恢复操作按钮显示
+    noPrintElements.forEach(el => {
+      (el as HTMLElement).style.display = ''
     })
 
     // 创建 PDF
