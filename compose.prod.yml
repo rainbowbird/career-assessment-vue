@@ -48,6 +48,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      target: production
     container_name: career-assessment-api
     restart: always
     expose:
@@ -68,6 +69,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      target: production
     container_name: career-assessment-web
     restart: always
     expose:
