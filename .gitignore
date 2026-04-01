@@ -45,3 +45,6 @@ coverage/
 .cache/
 .temp/
 .tmp/
+
+# Legacy HTML file
+career_assesment_v3.html
