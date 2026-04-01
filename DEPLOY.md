@@ -30,7 +30,7 @@ docker compose version
 
 ```bash
 # 方式1：从 Git 克隆
-git clone https://github.com/your-repo/career-assessment-vue.git
+git clone https://github.com/rainbowbird/career-assessment-vue.git
 cd career-assessment-vue
 
 # 方式2：上传压缩包到云主机
@@ -241,7 +241,7 @@ docker compose -f compose.prod.yml restart api
 
 如有问题，请查看：
 - 📚 项目文档：[README.md](README.md)
-- 🐛 提交 Issue: [GitHub Issues](https://github.com/your-repo/issues)
+- 🐛 提交 Issue: [GitHub Issues](https://github.com/rainbowbird/career-assessment-vue/issues)
 - 💬 联系开发者
 
 ---

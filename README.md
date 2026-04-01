@@ -23,7 +23,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone <repository-url>
+git clone https://github.com/rainbowbird/career-assessment-vue.git
 cd career-assessment
 
 # 2. 安装依赖
