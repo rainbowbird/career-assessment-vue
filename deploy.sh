@@ -1,7 +1,7 @@
+#!/bin/bash
+#
 # 生产环境部署脚本
 # 使用方法: ./deploy.sh
-
-#!/bin/bash
 
 set -e
 

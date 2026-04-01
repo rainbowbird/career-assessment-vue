@@ -53,8 +53,14 @@ pnpm dev
 docker compose up -d
 
 # 生产环境
-docker compose -f compose.prod.yml up -d
+# 详见 DEPLOY.md 文档
 ```
+
+## 📚 文档
+
+- [本地开发指南](LOCAL_DEV_GUIDE.md) - Docker Compose 本地开发
+- [生产部署指南](DEPLOY.md) - 云主机一键部署
+- [代理配置指南](AGENTS.md) - 开发规范和技术栈
 
 ## 📁 项目结构
 

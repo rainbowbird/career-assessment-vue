@@ -1,5 +1,7 @@
 # Career Assessment System - 云主机一键部署指南
 
+> 📚 **相关文档**：[README.md](README.md) | [本地开发指南](LOCAL_DEV_GUIDE.md) | [代理配置指南](AGENTS.md)
+
 ## 🚀 快速开始
 
 ### 1. 准备云主机
@@ -104,6 +106,43 @@ docker compose -f compose.prod.yml down
 
 # 备份数据
 ./backup.sh
+```
+
+## 💾 数据备份
+
+### 手动备份
+
+```bash
+# 运行备份脚本（自动压缩并清理旧备份）
+./backup.sh
+```
+
+备份脚本会自动：
+- 导出 MySQL 数据库
+- 压缩备份文件（.gz 格式）
+- 清理 30 天前的旧备份
+- 显示备份文件大小
+
+### 自动备份（推荐）
+
+设置定时任务，每天自动备份：
+
+```bash
+# 编辑 crontab
+crontab -e
+
+# 添加以下行（每天凌晨 2 点备份）
+0 2 * * * cd /path/to/career-assessment-vue && ./backup.sh >> ./data/logs/backup.log 2>&1
+```
+
+### 恢复备份
+
+```bash
+# 解压备份文件
+gunzip ./data/backups/backup_20240101_120000.sql.gz
+
+# 恢复数据库
+docker compose -f compose.prod.yml exec -T mysql mysql -u root -p${MYSQL_ROOT_PASSWORD} career_assessment < ./data/backups/backup_20240101_120000.sql
 ```
 
 ## 🔐 配置 HTTPS (SSL)
